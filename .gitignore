@@ -1,0 +1,5 @@
+# Ignorer les fichiers temporaires
+temp_chart/
+__pycache__/
+*.pyc
+*.log
