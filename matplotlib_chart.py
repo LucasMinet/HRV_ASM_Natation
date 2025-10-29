@@ -110,14 +110,16 @@ def create_daily_chart_matplotlib(
         title="Nageurs",
         title_fontsize=11,
         fontsize=9,
-        loc="upper left",              # position de référence
-        bbox_to_anchor=(1.02, 1.0),    # légèrement à droite, en haut
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
         frameon=False,
         scatterpoints=1,
-        markerscale=0.7,               # 🔧 réduit la taille des symboles dans la légende
-        handlelength=1.0,
-        handletextpad=0.5,
-        borderaxespad=0.0
+        markerscale=0.7,
+        handleheight=1.5,
+        handlelength=1.2,
+        handletextpad=0.6,
+        borderaxespad=0.2,
+        labelspacing=0.6,   # 🔧 espace vertical entre lignes
     )
     
     # Supprime les marges inutiles
@@ -193,7 +195,7 @@ def create_radar_chart(
         ax.plot([angle, angle], [0, 200], color="gray", linewidth=0.8, alpha=0.6)
 
     # --- Moyenne (gris pointillé)
-    ax.plot(angles, mean_values, color="gray", linewidth=1.2, linestyle="dashed", label="Moyenne")
+    ax.plot(angles, mean_values, color="gray", linewidth=1.8, linestyle="dashed", label="Moyenne")
 
     # --- Athlète (rose foncé)
     ax.plot(angles, athlete_values, color="#C40B71", linewidth=2.2, label=athlete_data.get("Nom", "Athlète"))
@@ -262,7 +264,7 @@ def create_triangle_chart(
     ax.plot(angles, outer_radius, color="gray", linewidth=1, alpha=0.5)
 
     # --- Moyenne (gris clair)
-    ax.plot(angles, mean_values, color="gray", linewidth=1.2, linestyle="dashed", label="Moyenne")
+    ax.plot(angles, mean_values, color="gray", linewidth=1.8, linestyle="dashed", label="Moyenne")
     ax.fill(angles, mean_values, color="gray", alpha=0.1)
 
     # --- Athlète (rose foncé)

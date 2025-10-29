@@ -115,14 +115,14 @@ else:
             with c_nom:
                 athlete["Nom"] = st.text_input("Nom", value=athlete["Nom"], key=f"nom_{a_id}")
             with c_regen:
-                athlete["% Régénération"] = st.number_input("% Régénération", 0.0, 200.0,
-                                                            float(athlete["% Régénération"]), step=1.0, key=f"regen_{a_id}")
+                athlete["% Régénération"] = st.number_input("% Régénération", 0, 200,
+                                                            int(athlete["% Régénération"]), step=1, key=f"regen_{a_id}")
             with c_effort:
-                athlete["% Capacité Effort"] = st.number_input("% Capacité Effort", 0.0, 200.0, 
-                                                               float(athlete["% Capacité Effort"]), step=1.0, key=f"effort_{a_id}")
+                athlete["% Capacité Effort"] = st.number_input("% Capacité Effort", 0, 200, 
+                                                               int(athlete["% Capacité Effort"]), step=1, key=f"effort_{a_id}")
             with c_reserve:
-                athlete["% Réserve"] = st.number_input("% Réserve", 0.0, 200.0,
-                                                       float(athlete["% Réserve"]), key=f"reserve_{a_id}")
+                athlete["% Réserve"] = st.number_input("% Réserve", 0, 200,
+                                                       int(athlete["% Réserve"]), step=1, key=f"reserve_{a_id}")
             with c_fc_c:
                 athlete["FC Couché"] = st.number_input("FC Couché", 0, 300,
                                                        int(athlete["FC Couché"]), key=f"fc_couche_{a_id}")
