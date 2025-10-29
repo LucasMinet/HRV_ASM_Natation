@@ -1,5 +1,15 @@
-# Ignorer les fichiers temporaires
+# --- Dossiers à ignorer ---
 temp_chart/
 __pycache__/
+.env/
+.venv/
+.vscode/
+.idea/
+
+# --- Fichiers temporaires ---
 *.pyc
 *.log
+*.DS_Store
+
+# --- Sorties Streamlit / cache ---
+.streamlit/
