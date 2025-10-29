@@ -304,8 +304,8 @@ def generate_hrv_report(
             c.setFillColor(red)
             c.drawCentredString(msg_x_center + 10, msg_y + 3, "Attention : Menstruations")
 
-            # ✅ Ajoute cette ligne à la fin de la boucle pour forcer un saut de page
-            c.showPage()
+        # ✅ Ajoute cette ligne à la fin de la boucle pour forcer un saut de page
+        c.showPage()
 
     c.save()
     print(f"✅ Rapport sauvegardé : {output_pdf_path}")
