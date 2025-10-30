@@ -136,85 +136,82 @@ def create_daily_chart_matplotlib(
 
 def create_radar_chart(
     athlete_data: dict,
-    reference_df,
+    reference_df: pd.DataFrame,
     save_path: str = "radar_chart.png",
     figsize=(6, 6)
 ):
     """
     Radar chart avec zones colorées dynamiques selon les seuils.
-    Échelle 0–200 par pas de 25, axes visibles, et zones empilées.
+    Gère automatiquement la ligne '{Nom} Moyenne' si elle existe.
     """
 
-    # --- Variables principales
+    import numpy as np
+    import matplotlib.pyplot as plt
+
     categories = ['% Capacité Effort', '% Réserve', '% Régénération', 'FC Couché', 'FC Debout']
     N = len(categories)
     angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
-    angles += angles[:1]  # fermer le cercle
+    angles += angles[:1]
 
-    # --- Données athlète + moyenne
+    nom = athlete_data.get("Nom", "Athlète")
+
+    # ✅ Sélection de la bonne ligne moyenne (ex: "Marius Moyenne")
+    mean_row = reference_df.loc[
+        reference_df.index.str.contains(fr"^{nom}", case=False, na=False)
+    ]
+    if not mean_row.empty:
+        mean_row = mean_row.iloc[0]
+    else:
+        # fallback : ligne "Moyenne" ou la première ligne moyenne dispo
+        mean_candidates = reference_df[reference_df.index.str.contains("Moyenne", case=False, na=False)]
+        mean_row = mean_candidates.iloc[0] if not mean_candidates.empty else reference_df.iloc[0]
+
+    # === Données ===
     athlete_values = [athlete_data[c] for c in categories] + [athlete_data[categories[0]]]
-    mean_values = reference_df.loc["Moyenne", categories].tolist() + [reference_df.loc["Moyenne", categories[0]]]
+    mean_values = mean_row[categories].tolist() + [mean_row[categories[0]]]
 
-    # --- Figure
+    # === Figure ===
     fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
-    ax.set_theta_offset(np.pi / 2)  # 90° en haut
+    ax.set_theta_offset(np.pi / 2)
     ax.set_theta_direction(-1)
-    ax.set_rlabel_position(0)
     ax.set_ylim(0, 200)
-
-    # --- Nettoyage esthétique
-    ax.spines['polar'].set_visible(False)
     ax.grid(False)
+    ax.spines['polar'].set_visible(False)
 
-    # ==========================================================
-    # 🟢 ZONES COLORÉES SELON LES SEUILS (EMPILÉES)
-    # ==========================================================
-    # Valeurs de seuils par catégorie
-    danger_vals = reference_df.loc["DANGER", categories].tolist() + [reference_df.loc["DANGER", categories[0]]]
-    vigil_vals  = reference_df.loc["VIGILANCE", categories].tolist() + [reference_df.loc["VIGILANCE", categories[0]]]
-    correct_vals= reference_df.loc["CORRECT", categories].tolist() + [reference_df.loc["CORRECT", categories[0]]]
-    ok_vals     = reference_df.loc["OK", categories].tolist() + [reference_df.loc["OK", categories[0]]]
+    # === Zones colorées selon les seuils ===
+    def vals(level): return reference_df.loc[level, categories].tolist() + [reference_df.loc[level, categories[0]]]
 
-    # Zones colorées empilées
-    ax.fill(angles, danger_vals, color="red", alpha=0.2, label="Danger")
-    ax.fill_between(angles, danger_vals, vigil_vals, color="orange", alpha=0.2, label="Vigilance")
-    ax.fill_between(angles, vigil_vals, correct_vals, color="lightblue", alpha=0.2, label="Correct")
-    ax.fill_between(angles, correct_vals, ok_vals, color="lightgreen", alpha=0.2, label="OK")
-    ax.fill_between(angles, ok_vals, [200]*len(ok_vals), color="green", alpha=0.15, label="Excellent")
+    try:
+        danger_vals = vals("DANGER")
+        vigil_vals  = vals("VIGILANCE")
+        correct_vals= vals("CORRECT")
+        ok_vals     = vals("OK")
 
-    # --- Bordure verte max (200)
-    outer_radius = [200] * (N + 1)
-    ax.plot(angles, outer_radius, color="gray", linewidth=1, alpha=0.5)
+        ax.fill(angles, danger_vals, color="red", alpha=0.2, label="Danger")
+        ax.fill_between(angles, danger_vals, vigil_vals, color="orange", alpha=0.2)
+        ax.fill_between(angles, vigil_vals, correct_vals, color="lightblue", alpha=0.2)
+        ax.fill_between(angles, correct_vals, ok_vals, color="lightgreen", alpha=0.2)
+        ax.fill_between(angles, ok_vals, [200]*len(ok_vals), color="green", alpha=0.15)
+    except KeyError:
+        print(f"⚠️ Seuils manquants dans la table de référence pour {nom}")
 
-    # --- Lignes d’échelle (tous les 25)
-    for r in range(25, 201, 25):
-        ax.plot(angles, [r] * (N + 1), color="gray", linewidth=0.3, alpha=0.6, linestyle='dotted')
+    # === Moyenne (gris pointillé)
+    ax.plot(angles, mean_values, color="gray", linewidth=1.8, linestyle="dashed", label=f"{nom} Moyenne")
+    ax.fill(angles, mean_values, color="gray", alpha=0.08)
 
-    # --- Axes visibles (lignes radiales)
-    for angle in angles[:-1]:
-        ax.plot([angle, angle], [0, 200], color="gray", linewidth=0.8, alpha=0.6)
+    # === Athlète
+    ax.plot(angles, athlete_values, color="#C40B71", linewidth=2.2, label=nom)
+    ax.fill(angles, athlete_values, color="#C40B71", alpha=0.25)
 
-    # --- Moyenne (gris pointillé)
-    ax.plot(angles, mean_values, color="gray", linewidth=1.8, linestyle="dashed", label="Moyenne")
-
-    # --- Athlète (rose foncé)
-    ax.plot(angles, athlete_values, color="#C40B71", linewidth=2.2, label=athlete_data.get("Nom", "Athlète"))
-    ax.fill(angles, athlete_values, color="#C40B71", alpha=0.2)
-
-    # --- Étiquettes des axes
+    # === Esthétique
     plt.xticks(angles[:-1], categories, fontsize=9, weight="bold")
-
-    # --- Ticks radiaux
     ax.set_yticks(np.arange(0, 201, 25))
     ax.set_yticklabels([str(v) for v in range(0, 201, 25)], fontsize=7, color="gray")
-
-    # --- Légende
     ax.legend(loc="upper right", bbox_to_anchor=(1.2, 1.1), frameon=False, fontsize=8)
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-
     print(f"✅ Radar chart sauvegardé : {save_path}")
     return save_path
 
@@ -224,65 +221,66 @@ def create_radar_chart(
 
 def create_triangle_chart(
     athlete_data: dict,
-    reference_df,
+    reference_df: pd.DataFrame,
     save_path: str = "triangle_chart.png",
     figsize=(5, 4)
 ):
     """
-    Triangle chart (radar 3 axes) comparant l'athlète et la moyenne
-    pour % Régénération, % Réserve et % Capacité Effort.
+    Triangle chart (radar 3 axes) comparant l'athlète et sa ligne '{Nom} Moyenne'.
     """
 
-    # --- Variables principales
+    import numpy as np
+    import matplotlib.pyplot as plt
+
     categories = ['% Capacité Effort', '% Réserve', '% Régénération']
     N = len(categories)
     angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
-    angles += angles[:1]  # fermer le triangle
+    angles += angles[:1]
 
-    # --- Données athlète + moyenne
+    nom = athlete_data.get("Nom", "Athlète")
+
+    # ✅ Sélection de la bonne ligne moyenne
+    mean_row = reference_df.loc[
+        reference_df.index.str.contains(fr"^{nom}", case=False, na=False)
+    ]
+    if not mean_row.empty:
+        mean_row = mean_row.iloc[0]
+    else:
+        mean_candidates = reference_df[reference_df.index.str.contains("Moyenne", case=False, na=False)]
+        mean_row = mean_candidates.iloc[0] if not mean_candidates.empty else reference_df.iloc[0]
+
     athlete_values = [athlete_data[c] for c in categories] + [athlete_data[categories[0]]]
-    mean_values = reference_df.loc["Moyenne", categories].tolist() + [reference_df.loc["Moyenne", categories[0]]]
+    mean_values = mean_row[categories].tolist() + [mean_row[categories[0]]]
 
-    # --- Figure polaire
     fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
     ax.set_theta_offset(np.pi / 2)
     ax.set_theta_direction(-1)
-    ax.set_rlabel_position(0)
     ax.set_ylim(0, 200)
-
-    # --- Nettoyage esthétique
-    ax.spines['polar'].set_visible(False)
     ax.grid(False)
+    ax.spines['polar'].set_visible(False)
 
-    # --- Lignes de fond et axes visibles
+    # --- Axes de fond
     for r in range(25, 201, 25):
         ax.plot(angles, [r] * (N + 1), color="gray", linewidth=0.3, alpha=0.5, linestyle='dotted')
     for angle in angles[:-1]:
         ax.plot([angle, angle], [0, 200], color="gray", linewidth=0.8, alpha=0.6)
 
-    outer_radius = [200] * (N + 1)
-    ax.plot(angles, outer_radius, color="gray", linewidth=1, alpha=0.5)
-
-    # --- Moyenne (gris clair)
-    ax.plot(angles, mean_values, color="gray", linewidth=1.8, linestyle="dashed", label="Moyenne")
+    # --- Moyenne
+    ax.plot(angles, mean_values, color="gray", linewidth=1.8, linestyle="dashed", label=f"{nom} Moyenne")
     ax.fill(angles, mean_values, color="gray", alpha=0.1)
 
-    # --- Athlète (rose foncé)
-    ax.plot(angles, athlete_values, color="#C40B71", linewidth=2.2, label=athlete_data.get("Nom", "Athlète"))
-    ax.fill(angles, athlete_values, color="#C40B71", alpha=0.2)
+    # --- Athlète
+    ax.plot(angles, athlete_values, color="#C40B71", linewidth=2.2, label=nom)
+    ax.fill(angles, athlete_values, color="#C40B71", alpha=0.25)
 
-    # --- Étiquettes
     plt.xticks(angles[:-1], categories, fontsize=9, weight="bold")
     ax.set_yticks(np.arange(0, 201, 25))
     ax.set_yticklabels([str(v) for v in range(0, 201, 25)], fontsize=7, color="gray")
-
-    # --- Légende
     ax.legend(loc="upper right", bbox_to_anchor=(1.2, 1.1), frameon=False, fontsize=8)
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-
     print(f"✅ Triangle chart sauvegardé : {save_path}")
     return save_path
 

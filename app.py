@@ -160,33 +160,79 @@ df_athletes = pd.DataFrame([{k: v for k, v in a.items() if k != "id"} for a in s
 # ---------------------------
 # ACCORDÉON : Paramètres de référence
 # ---------------------------
-with st.expander("⚙️ Paramètres de référence", expanded=False):
-    st.markdown("Ajustez les seuils de référence pour chaque indicateur 👇")
+with st.expander("⚙️ Paramètres de référence", expanded=True):
+    st.markdown("Ajustez les seuils pour chaque athlète 👇")
 
-    default_reference = pd.DataFrame({
+    # Liste des athlètes actuellement saisis
+    athlete_names = [a["Nom"].strip() for a in st.session_state["athletes"] if a["Nom"].strip()]
+
+    # Table de base (seuils communs)
+    base_reference = pd.DataFrame({
         "Niveau": ["Moyenne", "DANGER", "VIGILANCE", "CORRECT", "OK"],
         "% Capacité Effort": [100, 40, 80, 120, 150],
         "% Réserve": [100, 40, 80, 120, 150],
         "% Régénération": [100, 40, 80, 120, 150],
         "FC Couché": [61, 40, 80, 120, 150],
-        "FC Debout": [90, 40, 80, 120, 150]
+        "FC Debout": [90, 40, 80, 120, 150],
     })
 
-    # Charger depuis la session si déjà modifié
-    if "reference_table" not in st.session_state:
-        st.session_state["reference_table"] = default_reference.copy()
+    # Seuils individuels connus
+    default_fc = {
+        "gaetane": {"FC Couché": 60, "FC Debout": 85},
+        "marius": {"FC Couché": 56, "FC Debout": 105},
+        "lili rose": {"FC Couché": 61, "FC Debout": 97},
+        "alicia": {"FC Couché": 61, "FC Debout": 90},
+    }
 
-    # Éditeur interactif
+    if not athlete_names:
+        st.info("Ajoutez d’abord des athlètes pour personnaliser les lignes Moyenne.")
+        st.session_state["reference_table"] = base_reference.copy()
+    else:
+        # --- 1️⃣ Créer les lignes "Nom Moyenne" pour chaque athlète
+        moyenne_rows = []
+        for nom in athlete_names:
+            nom_clean = nom.strip()
+            nom_lower = nom_clean.lower()
+
+            row = {
+                "Niveau": f"{nom_clean} Moyenne",
+                "% Capacité Effort": 100,
+                "% Réserve": 100,
+                "% Régénération": 100,
+                "FC Couché": 61,
+                "FC Debout": 90,
+            }
+
+            # Appliquer valeurs FC personnalisées connues
+            if nom_lower in default_fc:
+                row["FC Couché"] = default_fc[nom_lower]["FC Couché"]
+                row["FC Debout"] = default_fc[nom_lower]["FC Debout"]
+
+            moyenne_rows.append(row)
+
+        df_moyennes = pd.DataFrame(moyenne_rows)
+
+        # --- 2️⃣ Ajouter les lignes seuils globales une seule fois
+        df_seuils = base_reference.loc[base_reference["Niveau"].isin(["DANGER", "VIGILANCE", "CORRECT", "OK"])]
+
+        # --- 3️⃣ Fusion finale : toutes les moyennes en haut, seuils en bas
+        full_ref = pd.concat([df_moyennes, df_seuils], ignore_index=True)
+
+        # Sauvegarde dans la session
+        st.session_state["reference_table"] = full_ref.copy()
+
+    # --- 4️⃣ Affichage éditable
     edited_reference = st.data_editor(
         st.session_state["reference_table"],
         width="stretch",
-        num_rows="fixed",
+        num_rows="dynamic",
         hide_index=True,
         column_config={
-            "Niveau": st.column_config.TextColumn("Niveau", disabled=True)
+            "Niveau": st.column_config.TextColumn("Niveau"),
         }
     )
 
+    # --- 5️⃣ Mettre à jour la session
     st.session_state["reference_table"] = edited_reference
 
 st.markdown("---")
